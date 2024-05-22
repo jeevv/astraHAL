@@ -69,6 +69,15 @@ const osThreadAttr_t defaultTask_attributes = {
 /* USER CODE BEGIN PV */
 static int32_t LeftWheelEncoder=0;
 static int32_t RightWheelEncoder=0;
+
+double LeftWheelVelocity;
+double RightWheelVelocity;
+
+double LeftMotorSpeed;
+double RightMotorSpeed;
+
+const double Length = 0.225;    //distance between wheel and center of bot
+const double WheelRadius = 0.07;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,38 +98,96 @@ void subscription_cmd_vel_callback(const void * msgin)
 {
 	geometry_msgs__msg__Twist * msg = (geometry_msgs__msg__Twist *)msgin;
 
-	if (msg->linear.x >= 0) {
-//		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, SET);
-//		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
-		TIM3->CCR1 = 200*msg->linear.x;
-		TIM3->CCR2 = 0;
-		TIM3->CCR3 = 200*msg->linear.x;
-		TIM3->CCR4 = 0;
+	LeftWheelVelocity = msg->linear.x - msg->angular.z*Length;
+	RightWheelVelocity = msg->linear.x + msg->angular.z*Length;
 
+
+	LeftMotorSpeed = (int)(LeftWheelVelocity/WheelRadius) * 60/6.2831;            //w of motor in rpm
+	RightMotorSpeed = (int)(RightWheelVelocity/WheelRadius) * 60/6.2831;
+
+	//PWM2 Right motor PA7
+	//PWM1 Right motor PA6
+	//PWM2 Left motor PB0
+	//PWM1 Left motor PB1
+
+	if (LeftMotorSpeed>=0 && LeftMotorSpeed<=1000 && RightMotorSpeed>=0 && RightMotorSpeed<=1000)	//front
+	{
+ 		TIM3->CCR1 = LeftMotorSpeed;
+		TIM3->CCR2 = 0;
+		TIM3->CCR3 = RightMotorSpeed;
+		TIM3->CCR4 = 0;
 	}
-	else {
-//		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, SET);
-//		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+	else if (LeftMotorSpeed<=0 && LeftMotorSpeed>=-1000 && RightMotorSpeed<=0 && RightMotorSpeed>=-1000)	//back
+	{
 		TIM3->CCR1 = 0;
-		TIM3->CCR2 = -200*msg->linear.x;
+		TIM3->CCR2 = -LeftMotorSpeed;
 		TIM3->CCR3 = 0;
-		TIM3->CCR4 = -200*msg->linear.x;
+		TIM3->CCR4 = -RightMotorSpeed;
 	}
+	else if (LeftMotorSpeed<=0 && LeftMotorSpeed>=-1000 && RightMotorSpeed>=0 && RightMotorSpeed<=1000)		//left
+	{
+		TIM3->CCR1 = 0;
+		TIM3->CCR2 = -LeftMotorSpeed;
+		TIM3->CCR3 = RightMotorSpeed;
+		TIM3->CCR4 = 0;
+	}
+	else if (LeftMotorSpeed>=0 && LeftMotorSpeed<=1000 && RightMotorSpeed<=0 && RightMotorSpeed>=-1000)		//right
+	{
+		TIM3->CCR1 = LeftMotorSpeed;
+		TIM3->CCR2 = 0;
+		TIM3->CCR3 = 0;
+		TIM3->CCR4 = -RightMotorSpeed;
+	}
+	else
+	{
+		TIM3->CCR1 = 0;
+		TIM3->CCR2 = 0;
+		TIM3->CCR3 = 0;
+		TIM3->CCR4 = 0;
+	}
+
+//	if (msg->linear.x >= 0) {
+////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, SET);
+////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+//		TIM3->CCR1 = 200*msg->linear.x;			//PWM2 Right motor PA5
+//		TIM3->CCR2 = 0;							//PWM1 Right motor PA6
+//		TIM3->CCR3 = 200*msg->linear.x;			//PWM2 Left motor PB0
+//		TIM3->CCR4 = 0;							//PWM1 Left motor PB1
+//
+//	}
+//	else {
+////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, SET);
+////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
+//		TIM3->CCR1 = 0;
+//		TIM3->CCR2 = -200*msg->linear.x;
+//		TIM3->CCR3 = 0;
+//		TIM3->CCR4 = -200*msg->linear.x;
+//	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == GPIO_PIN_0)					//PA0 LeftWheelEncoderChannelA  PE11 LeftWheelEncoderChannelB
 	{
-//		left_wheel_encoder++;
+//		LeftWheelEncoder++;
 		if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11) == 1) LeftWheelEncoder++;
 		else if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11) == 0) LeftWheelEncoder--;
+
+//		switch(HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_11))
+//		{
+//		case 0:
+//			LeftWheelEncoder--;
+//			break;
+//		case 1:
+//			LeftWheelEncoder++;
+//			break;
+//		}
 	}
-	if (GPIO_Pin == GPIO_PIN_1)					//PA1 RightWheelEncoderChannelA  PE12 RightWheelEncoderChannelB
+	else if (GPIO_Pin == GPIO_PIN_1)					//PA1 RightWheelEncoderChannelA  PE12 RightWheelEncoderChannelB
 	{
-//		right_wheel_encoder++;
-		if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_12) == 1) RightWheelEncoder++;
-		else if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_12) == 0) RightWheelEncoder--;
+//		RightWheelEncoder++;
+		if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_12) == 0) RightWheelEncoder++;
+		else if (HAL_GPIO_ReadPin(GPIOE, GPIO_PIN_12) == 1) RightWheelEncoder--;
 	}
 }
 /* USER CODE END 0 */
@@ -518,8 +585,8 @@ void StartDefaultTask(void *argument)
 
 	  for(;;)
 	  {
-		msg1.data = left_wheel_encoder;
-		msg2.data = right_wheel_encoder;
+		msg1.data = LeftWheelEncoder;
+		msg2.data = RightWheelEncoder;
 	    rcl_ret_t ret1 = rcl_publish(&publisher1, &msg1, NULL);
 	    rcl_ret_t ret2 = rcl_publish(&publisher2, &msg2, NULL);
 	    rclc_executor_spin_some(&executor, 1000);    						// waits for 1000ns for ros data, theres no data it continues, if there is data then it executes subscription callback
