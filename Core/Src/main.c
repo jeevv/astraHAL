@@ -30,7 +30,7 @@
 #include <rmw_microxrcedds_c/config.h>
 #include <rmw_microros/rmw_microros.h>
 
-#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/int16.h>
 
 #include <geometry_msgs/msg/twist.h>
 #include <stdio.h>
@@ -105,10 +105,10 @@ void subscription_cmd_vel_callback(const void * msgin)
 	LeftMotorSpeed = (int)(LeftWheelVelocity/WheelRadius) * 60/6.2831;            //w of motor in rpm
 	RightMotorSpeed = (int)(RightWheelVelocity/WheelRadius) * 60/6.2831;
 
-	//PWM2 Right motor PA7
-	//PWM1 Right motor PA6
-	//PWM2 Left motor PB0
-	//PWM1 Left motor PB1
+	//PWM2 Right motor PA6
+	//PWM1 Right motor PA7
+	//PWM2 Left motor PB1
+	//PWM1 Left motor PB0
 
 	if (LeftMotorSpeed>=0 && LeftMotorSpeed<=1000 && RightMotorSpeed>=0 && RightMotorSpeed<=1000)	//front
 	{
@@ -126,17 +126,17 @@ void subscription_cmd_vel_callback(const void * msgin)
 	}
 	else if (LeftMotorSpeed<=0 && LeftMotorSpeed>=-1000 && RightMotorSpeed>=0 && RightMotorSpeed<=1000)		//left
 	{
-		TIM3->CCR1 = 0;
-		TIM3->CCR2 = -LeftMotorSpeed;
-		TIM3->CCR3 = RightMotorSpeed;
-		TIM3->CCR4 = 0;
+		TIM3->CCR1 = -LeftMotorSpeed;
+		TIM3->CCR2 = 0;
+		TIM3->CCR3 = 0;
+		TIM3->CCR4 = RightMotorSpeed;
 	}
 	else if (LeftMotorSpeed>=0 && LeftMotorSpeed<=1000 && RightMotorSpeed<=0 && RightMotorSpeed>=-1000)		//right
 	{
-		TIM3->CCR1 = LeftMotorSpeed;
-		TIM3->CCR2 = 0;
-		TIM3->CCR3 = 0;
-		TIM3->CCR4 = -RightMotorSpeed;
+		TIM3->CCR1 = 0;
+		TIM3->CCR2 = LeftMotorSpeed;
+		TIM3->CCR3 = -RightMotorSpeed;
+		TIM3->CCR4 = 0;
 	}
 	else
 	{
@@ -149,10 +149,10 @@ void subscription_cmd_vel_callback(const void * msgin)
 //	if (msg->linear.x >= 0) {
 ////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, SET);
 ////		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, SET);
-//		TIM3->CCR1 = 200*msg->linear.x;			//PWM2 Right motor PA5
-//		TIM3->CCR2 = 0;							//PWM1 Right motor PA6
-//		TIM3->CCR3 = 200*msg->linear.x;			//PWM2 Left motor PB0
-//		TIM3->CCR4 = 0;							//PWM1 Left motor PB1
+//		TIM3->CCR1 = 200*msg->linear.x;
+//		TIM3->CCR2 = 0;
+//		TIM3->CCR3 = 200*msg->linear.x;
+//		TIM3->CCR4 = 0;
 //
 //	}
 //	else {
@@ -542,8 +542,8 @@ void StartDefaultTask(void *argument)
 	  rcl_publisher_t publisher1;
 	  rcl_publisher_t publisher2;
 	  rcl_subscription_t subscriber_cmd_vel;
-	  std_msgs__msg__Int32 msg1;
-	  std_msgs__msg__Int32 msg2;
+	  std_msgs__msg__Int16 msg1;
+	  std_msgs__msg__Int16 msg2;
 	  geometry_msgs__msg__Twist sub_cmd_vel_msg;
 	  rclc_support_t support;
 	  rcl_allocator_t allocator;
@@ -561,14 +561,14 @@ void StartDefaultTask(void *argument)
 	  rclc_publisher_init_default(
 	    &publisher1,
 	    &node,
-	    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-	    "left_wheel_encoder");
+	    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
+	    "lwheel");
 
 	  rclc_publisher_init_default(
 	  	    &publisher2,
 	  	    &node,
-	  	    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-	  	    "right_wheel_encoder");
+	  	    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
+	  	    "rwheel");
 
 	  // create subscriber
 
